@@ -1,0 +1,180 @@
+import { NextRequest, NextResponse } from "next/server"
+import { writeFile, mkdir } from "fs/promises"
+import { existsSync } from "fs"
+import path from "path"
+import { db } from "@/lib/utils/db"
+import { ApiResponse, UploadedFile } from "@/lib/types"
+
+// Allowed file types for security
+const ALLOWED_TYPES = [
+    "text/csv",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+]
+
+// Max file size: 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+
+export async function POST(
+    req: NextRequest
+): Promise<NextResponse<ApiResponse<UploadedFile>>> {
+    try {
+        const formData = await req.formData()
+        const file = formData.get("file") as File | null
+        const sessionId = formData.get("sessionId") as string | null
+
+        if (!file) {
+            return NextResponse.json(
+                { success: false, error: "No file provided" },
+                { status: 400 }
+            )
+        }
+
+        if (!sessionId) {
+            return NextResponse.json(
+                { success: false, error: "Session ID is required" },
+                { status: 400 }
+            )
+        }
+
+        if (!ALLOWED_TYPES.includes(file.type)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "File type not supported. Please upload CSV, XLSX, PDF, or image files",
+                },
+                { status: 400 }
+            )
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: "File size exceeds 10MB limit",
+                },
+                { status: 400 }
+            )
+        }
+
+        const session = await db.session.findUnique({ where: { id: sessionId } })
+        if (!session) {
+            return NextResponse.json(
+                { success: false, error: "Session not found" },
+                { status: 404 }
+            )
+        }
+
+        const uploadDir = path.join(process.cwd(), "uploads", sessionId)
+        if (!existsSync(uploadDir)) {
+            await mkdir(uploadDir, { recursive: true })
+        }
+
+        const timestamp = Date.now()
+        const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "-")
+        const uniqueFileName = `${timestamp}-${safeFileName}`
+        const filePath = path.join(uploadDir, uniqueFileName)
+
+        // Convert file to buffer and save to disk
+        const bytes = await file.arrayBuffer()
+        const buffer = Buffer.from(bytes)
+        await writeFile(filePath, buffer)
+
+        // Determine file type from mime type
+        const fileType = getFileType(file.type)
+
+        // Save file record to database with "processing" status
+        const uploadedFile = await db.uploadedFile.create({
+            data: {
+                sessionId,
+                fileName: file.name,
+                fileType,
+                fileSize: file.size,
+                filePath,
+                status: "processing",
+            },
+        })
+
+        processFileAsync(uploadedFile.id, filePath, fileType)
+
+        const mapped: UploadedFile = {
+            id: uploadedFile.id,
+            sessionId: uploadedFile.sessionId,
+            fileName: uploadedFile.fileName,
+            fileType: uploadedFile.fileType as UploadedFile["fileType"],
+            fileSize: uploadedFile.fileSize,
+            uploadedAt: uploadedFile.uploadedAt.toISOString(),
+            status: "processing",
+        }
+
+        return NextResponse.json(
+            { success: true, data: mapped },
+            { status: 201 }
+        )
+    } catch (error) {
+        console.error("[POST /api/upload]", error)
+        return NextResponse.json(
+            { success: false, error: "Failed to upload file" },
+            { status: 500 }
+        )
+    }
+}
+
+async function processFileAsync(
+    fileId: string,
+    filePath: string,
+    fileType: string
+) {
+    try {
+        const fastapiUrl = process.env.FASTAPI_URL || "http://localhost:8000"
+
+        const response = await fetch(`${fastapiUrl}/ingest`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileId, filePath, fileType }),
+        })
+
+        if (response.ok) {
+            const result = await response.json()
+
+            await db.uploadedFile.update({
+                where: { id: fileId },
+                data: {
+                    status: "ready",
+                    rowCount: result.rowCount,
+                    columnCount: result.columnCount,
+                    columns: JSON.stringify(result.columns),
+                },
+            })
+        } else {
+            await db.uploadedFile.update({
+                where: { id: fileId },
+                data: { status: "error" },
+            })
+        }
+    } catch (error) {
+        console.error("[processFileAsync]", error)
+        await db.uploadedFile.update({
+            where: { id: fileId },
+            data: { status: "error" },
+        })
+    }
+}
+
+// Helper — get our file type from mime type
+function getFileType(mimeType: string): UploadedFile["fileType"] {
+    if (mimeType === "text/csv") return "csv"
+    if (
+        mimeType ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+        mimeType === "application/vnd.ms-excel"
+    )
+        return "xlsx"
+    if (mimeType === "application/pdf") return "pdf"
+    return "image"
+}

@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// --- Session ---
+// A session groups uploaded files + conversations together
+model Session {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // A session can have many files and messages
+  files    UploadedFile[]
+  messages Message[]
+}
+
+// --- UploadedFile ---
+// Tracks every file a user uploads
+model UploadedFile {
+  id         String   @id @default(cuid())
+  sessionId  String
+  fileName   String
+  fileType   String   // csv | xlsx | pdf | image
+  fileSize   Int
+  filePath   String   // where the file is stored on disk
+  status     String   @default("processing") // uploading | processing | ready | error
+  rowCount   Int?
+  columnCount Int?
+  columns    String?  // stored as JSON string
+  uploadedAt DateTime @default(now())
+
+  // Relationship back to session
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+// --- Message ---
+// Every chat message in a session
+model Message {
+  id        String   @id @default(cuid())
+  sessionId String
+  role      String   // user | assistant
+  content   String
+  createdAt DateTime @default(now())
+
+  // Relationship back to session
+  session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
