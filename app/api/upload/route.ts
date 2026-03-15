@@ -100,7 +100,7 @@ export async function POST(
             },
         })
 
-        processFileAsync(uploadedFile.id, filePath, fileType)
+        processFileAsync(uploadedFile.id, sessionId, filePath, fileType)
 
         const mapped: UploadedFile = {
             id: uploadedFile.id,
@@ -127,6 +127,7 @@ export async function POST(
 
 async function processFileAsync(
     fileId: string,
+    sessionId: string,
     filePath: string,
     fileType: string
 ) {
@@ -136,7 +137,7 @@ async function processFileAsync(
         const response = await fetch(`${fastapiUrl}/ingest`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fileId, filePath, fileType }),
+            body: JSON.stringify({ fileId, sessionId, filePath, fileType }),
         })
 
         if (response.ok) {

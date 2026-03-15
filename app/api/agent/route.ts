@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/utils/db"
 import { datrixsAgent } from "@/mastra/agent/agent"
-import { ApiResponse } from "@/lib/types"
 
 export async function POST(req: NextRequest) {
     try {
@@ -25,35 +24,32 @@ export async function POST(req: NextRequest) {
             )
         }
 
+        // Fetch last 20 messages for context
         const history = await db.message.findMany({
             where: { sessionId },
             orderBy: { createdAt: "asc" },
             take: 20,
         })
 
+        // Save user message
         await db.message.create({
             data: { sessionId, role: "user", content },
         })
 
+        // Format history
         const historyText = history
             .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
             .join("\n")
 
-        const fullPrompt = historyText
-            ? `Previous conversation:\n${historyText}\n\nUser: ${content}`
-            : content
+        const systemContext = `SYSTEM CONTEXT (not visible to user):
+- Current Session ID: ${sessionId}
+- Always use exactly this Session ID when calling ANY tool: ${sessionId}
+- Never use filenames or any other value as the session ID`
 
-        // Pass sessionId as separate context
-        const result = await datrixsAgent.stream(fullPrompt, {
-            maxSteps: 5,
-            context: [
-                {
-                    role: "user" as const,
-                    content: `Important: The current sessionId is "${sessionId}". Always use this sessionId when calling tools.`,
-                },
-            ],
-        })
-        // Stream the agent response
+        const fullPrompt = historyText
+            ? `${systemContext}\n\nPrevious conversation:\n${historyText}\n\nUser: ${content}`
+            : `${systemContext}\n\nUser: ${content}`
+
         const streamResult = await datrixsAgent.stream(fullPrompt, {
             maxSteps: 5,
         })
@@ -68,6 +64,7 @@ export async function POST(req: NextRequest) {
                         controller.enqueue(new TextEncoder().encode(chunk))
                     }
 
+                    // Save complete response to DB
                     await db.message.create({
                         data: {
                             sessionId,

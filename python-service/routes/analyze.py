@@ -105,8 +105,11 @@ def run_groupby_analysis(df: pd.DataFrame, query: str) -> dict:
 
 
 def run_top_analysis(df: pd.DataFrame, query: str) -> dict:
-    """Return top N rows by numeric columns"""
+    """Return top N items by summed numeric columns"""
     numeric_cols = df.select_dtypes(include=["number"]).columns.tolist()
+    categorical_cols = df.select_dtypes(
+        include=["object", "category"]
+    ).columns.tolist()
 
     if not numeric_cols:
         return run_general_analysis(df)
@@ -118,6 +121,32 @@ def run_top_analysis(df: pd.DataFrame, query: str) -> dict:
             n = int(word)
             break
 
+    # If we have categorical columns, group and sum first
+    if categorical_cols:
+        group_col = categorical_cols[0]
+        # Find the most relevant numeric column from query
+        query_lower = query.lower()
+        target_col = numeric_cols[0]
+        for col in numeric_cols:
+            if col.lower().replace("_", " ") in query_lower:
+                target_col = col
+                break
+
+        # Group by categorical and sum numeric
+        grouped = df.groupby(group_col)[target_col].sum().reset_index()
+        grouped.columns = [group_col, target_col]
+        top_rows = grouped.nlargest(n, target_col).to_dict(orient="records")
+
+        return {
+            "type": "top",
+            "groupColumn": group_col,
+            "valueColumn": target_col,
+            "n": n,
+            "results": top_rows,
+            "summary": f"Top {n} {group_col} by total {target_col}"
+        }
+
+    # No categorical columns — just return top rows
     col = numeric_cols[0]
     top_rows = df.nlargest(n, col).fillna("").to_dict(orient="records")
 
@@ -126,9 +155,8 @@ def run_top_analysis(df: pd.DataFrame, query: str) -> dict:
         "column": col,
         "n": n,
         "results": top_rows,
-        "summary": f"Top {n} rows by '{col}'"
+        "summary": f"Top {n} rows by {col}"
     }
-
 
 def run_bottom_analysis(df: pd.DataFrame, query: str) -> dict:
     """Return bottom N rows by numeric columns"""

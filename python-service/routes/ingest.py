@@ -13,6 +13,7 @@ router = APIRouter()
 
 class IngestRequest(BaseModel):
     fileId: str
+    sessionId: str
     filePath: str
     fileType: str
 
@@ -51,10 +52,19 @@ async def ingest_file(request: IngestRequest):
         # Clean the dataframe
         df = clean_dataframe(df)
 
-        # Store in memory using fileId as key
-        # We use fileId here so multiple files
-        # in a session can be stored separately
+        # Store under fileId for individual file access
         set_dataset(request.fileId, df)
+
+        # Store under sessionId for agent queries
+        # If session already has data, append to avoid losing
+        # previously uploaded files in the same session
+        existing = get_dataset(request.sessionId)
+        if existing is not None:
+            combined = pd.concat([existing, df], ignore_index=True)
+            combined = combined.drop_duplicates()
+            set_dataset(request.sessionId, combined)
+        else:
+            set_dataset(request.sessionId, df)
 
         # Return metadata about the dataset
         preview = df.head(5).fillna("").to_dict(orient="records")
@@ -75,7 +85,6 @@ async def ingest_file(request: IngestRequest):
             status_code=500,
             detail=f"Failed to ingest file: {str(e)}"
         )
-
 
 def load_file(file_path: str, file_type: str) -> pd.DataFrame:
     """

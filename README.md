@@ -1,36 +1,142 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Datrixs — AI Data Analyst
 
-## Getting Started
+Datrixs is an AI-powered data analysis agent that lets you upload tabular data
+from multiple file formats and query it using natural language.
 
-First, run the development server:
+## Features
 
+- Upload CSV, XLSX, PDF tables, and scanned images
+- Natural language queries about your data
+- Streaming AI responses
+- Summary statistics and data insights
+- Multi-file session management
+- Conversation history
+
+## Tech Stack
+
+- **Frontend:** Next.js 16, Tailwind CSS, shadcn/ui
+- **Agent:** Mastra + OpenRouter
+- **Database:** SQLite + Prisma
+- **Data Processing:** FastAPI + pandas (Python)
+
+## Prerequisites
+
+- Node.js v18+
+- Python 3.9+
+- Git
+- Tesseract OCR (for scanned image support)
+
+### Install Tesseract (Mac)
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+brew install tesseract
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Install Tesseract (Ubuntu/Debian)
+```bash
+sudo apt-get install tesseract-ocr
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Clone the repository
+```bash
+git clone https://github.com/daviddozie/datrixs.git
+cd datrixs
+```
 
-## Learn More
+### 2. Install Node.js dependencies
+```bash
+npm install
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Configure environment variables
+```bash
+cp .env.example .env.local
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open `.env.local` and add your OpenRouter API key:
+```bash
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+MODEL_NAME=nvidia/nemotron-3-nano-30b-a3b:free
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+FASTAPI_URL=http://localhost:8000
+DATABASE_URL="file:./prisma/dev.db"
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Get your free API key at: https://openrouter.ai
 
-## Deploy on Vercel
+### 4. Set up the database
+```bash
+npx prisma migrate dev --name init
+npx prisma generate
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 5. Set up the Python microservice
+```bash
+cd python-service
+python3 -m venv venv
+source venv/bin/activate  # Mac/Linux
+pip install -r requirements.txt
+cd ..
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Running the App
+
+You need two terminals running simultaneously:
+
+### Terminal 1 — Next.js frontend
+```bash
+npm run dev
+```
+
+### Terminal 2 — FastAPI data processing service
+```bash
+cd python-service
+source venv/bin/activate
+uvicorn main:app --reload --port 8000
+```
+
+Open http://localhost:3000 in your browser.
+
+## Usage
+
+1. Click **New Session** to create a session
+2. Click the **paperclip icon** to upload a data file
+3. Wait for the file status to show **ready**
+4. Type a question and press **Enter**
+
+## Evaluation
+
+The evaluation dataset is in the `evaluation/` folder:
+- `sales_data.csv` — 50 rows of sales records
+- `student_data.pdf` — Student profile and course data
+
+### 5 Evaluation Questions
+
+| # | Question | Expected Answer |
+|---|---|---|
+| 1 | What is the total revenue across all orders? | $292,200.00 |
+| 2 | Which product generated the highest total profit? | Laptop Pro — $42,400.00 |
+| 3 | What is the average customer rating across all products? | 4.45 |
+| 4 | Which region has the highest total revenue? | East — $87,400.00 |
+| 5 | Who is the top sales rep by total revenue? | Alice Johnson — $109,300.00 |
+
+### Running Evaluations
+```bash
+cd evaluation
+python3 evaluate.py
+```
+
+## API Documentation
+
+FastAPI docs available at: http://localhost:8000/docs
+
+## Environment Variables
+
+| Variable | Description |
+|---|---|
+| `OPENROUTER_API_KEY` | Your OpenRouter API key |
+| `MODEL_NAME` | LLM model to use |
+| `NEXT_PUBLIC_APP_URL` | Frontend URL |
+| `FASTAPI_URL` | Python service URL |
+| `DATABASE_URL` | SQLite database path |

@@ -61,3 +61,6 @@ python-service/*.pyc
 # OS
 .DS_Store
 Thumbs.db
+
+# Evaluation results — generated file
+evaluation/results.json

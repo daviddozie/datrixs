@@ -1,49 +1,55 @@
 import { Agent } from "@mastra/core/agent"
+import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import { routerTool } from "../tools/router-tool"
 import { getDatasetInfoTool } from "../tools/dataset-info-tool"
+import { runStatsTool } from "../tools/stats-tool"
 import { analyzeDataTool } from "../tools/analyze-data-tool"
 import { mergeDatasetsTool } from "../tools/merge-dataset-tool"
-import { runStatsTool } from "../tools/stats-tool"
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 
 const openrouter = createOpenRouter({
-    apiKey: process.env.OPENROUTER_API_KEY!,
-});
-
+  apiKey: process.env.OPENROUTER_API_KEY!,
+})
 
 export const datrixsAgent = new Agent({
-    id: "datrixs-agent",
-    name: "Datrixs Agent",
+  id: "datrixs-agent",
+  name: "Datrixs Agent",
 
-   instructions: `You are Datrixs, an expert AI data analyst. Your job is 
-to help users understand their tabular data by answering questions, 
-computing statistics, and generating clear insights.
+  instructions: `You are Datrixs, an expert AI data analyst.
 
-RULES YOU MUST FOLLOW:
-1. Always call get-dataset-info first to understand the data before answering.
-2. Use run-statistics for questions about averages, totals, counts, distributions, or correlations.
-3. Use analyze-data for filtering, grouping, sorting, comparisons, and trends.
-4. Use merge-datasets when the user wants to analyze multiple uploaded files together.
-5. Always ground your answers in actual data — never make up numbers.
-6. Format responses clearly using bullet points for multiple insights.
-7. If the data does not contain what the user is asking about, say so clearly.
-8. Keep responses concise and focused on what the user asked.
-9. When presenting numbers always provide context e.g. "Average sales is $4,200 which is 15% above the median".
-10. Always mention which columns or files you used to derive your answer.
+STRICT WORKFLOW — follow this EVERY time:
+1. Call the "router" tool FIRST with the sessionId and the user's query
+2. The router will tell you EXACTLY which tool to call next and with what params
+3. Call that ONE tool as instructed
+4. Explain the results clearly to the user
 
-FORMATTING RULES:
-- Never mention session IDs, file IDs, or any technical identifiers in responses
-- Never wrap values in backticks — state them plainly e.g. "The email is davidmgbede28@gmail.com" not "The email is \`davidmgbede28@gmail.com\`"
+RULES:
+- ALWAYS start with the router tool — no exceptions
+- NEVER call get-dataset-info, run-statistics, analyze-data, or merge-datasets directly
+- The router decides which tool to use — trust it
+- After getting results explain them in plain English
+- Never mention session IDs, file IDs, or technical details
+- Never use backticks around values — state them plainly
 - Use **bold** only for column names and key terms
-- Never say "the dataset in session xyz" — just say "the uploaded data" or "the dataset"
-- Give direct clean answers like a human analyst would
-- Never expose internal system details to the user`,
+- Never say "dataset in session xyz" — say "the uploaded data"
+- Be concise and direct like a human analyst
+- Lead with the direct answer first then provide supporting details
+- Always mention which column the answer came from
+- Always format monetary values with $ and commas e.g. "$42,400.00" not "42400"
+- Always format percentages with % sign e.g. "4.5%" not "4.5"
+- Always format large numbers with commas e.g. "1,234,567" not "1234567"
+- When you see columns named revenue, profit, cost, price, sales, income, salary, amount, total — treat them as currency and format with $
+- When you see columns named rating, score, percentage, rate — format as decimal with 2 places
+`,
 
-    model: openrouter(process.env.MODEL_NAME || "openrouter/free"),
+  model: openrouter(
+    process.env.MODEL_NAME || "nvidia/nemotron-3-nano-30b-a3b:free"
+  ),
 
-    tools: {
-        getDatasetInfoTool,
-        runStatsTool,
-        analyzeDataTool,
-        mergeDatasetsTool,
-    },
+  tools: {
+    routerTool,
+    getDatasetInfoTool,
+    runStatsTool,
+    analyzeDataTool,
+    mergeDatasetsTool,
+  },
 })

@@ -77,26 +77,40 @@ async def run_statistics(request: StatsRequest):
 
 def compute_numeric_stats(df: pd.DataFrame) -> dict:
     """
-    Compute detailed statistics for numeric columns:
-    count, mean, median, std, min, max, quartiles
+    Compute detailed statistics for numeric columns
     """
+    # Columns that should be treated as currency
+    currency_keywords = [
+        "revenue", "profit", "cost", "price", "sales",
+        "income", "salary", "amount", "total", "fee",
+        "wage", "earning", "spend", "budget", "value"
+    ]
+
     stats = {}
     for col in df.columns:
         series = df[col].dropna()
         if len(series) == 0:
             continue
 
+        # Detect if column is likely currency
+        is_currency = any(
+            keyword in col.lower()
+            for keyword in currency_keywords
+        )
+
         stats[col] = {
             "count": int(series.count()),
-            "mean": round(float(series.mean()), 4),
-            "median": round(float(series.median()), 4),
-            "std": round(float(series.std()), 4),
-            "min": round(float(series.min()), 4),
-            "max": round(float(series.max()), 4),
-            "q25": round(float(series.quantile(0.25)), 4),
-            "q75": round(float(series.quantile(0.75)), 4),
+            "mean": round(float(series.mean()), 2),
+            "median": round(float(series.median()), 2),
+            "std": round(float(series.std()), 2),
+            "min": round(float(series.min()), 2),
+            "max": round(float(series.max()), 2),
+            "q25": round(float(series.quantile(0.25)), 2),
+            "q75": round(float(series.quantile(0.75)), 2),
             "nullCount": int(df[col].isnull().sum()),
-            "sum": round(float(series.sum()), 4),
+            "sum": round(float(series.sum()), 2),
+            "isCurrency": is_currency,
+            "format": "currency" if is_currency else "number"
         }
     return stats
 
