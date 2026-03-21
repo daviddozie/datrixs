@@ -7,6 +7,7 @@ type Store = {
     sessions: Session[]
     activeSessionId: string | null
     setSessions: (sessions: Session[]) => void
+    setLastMessageChart: (chartData: Message["chartData"]) => void
     setActiveSessionId: (id: string | null) => void
     addSession: (session: Session) => void
 
@@ -28,6 +29,7 @@ type Store = {
     setIsSidebarOpen: (open: boolean) => void
     setIsUploading: (uploading: boolean) => void
 
+
     pendingAttachment: {
         file: File
         preview: string | null
@@ -48,10 +50,21 @@ export const useStore = create<Store>((set) => ({
     // --- Sessions initial state ---
     sessions: [],
     activeSessionId: null,
+
     setSessions: (sessions) => set({ sessions }),
     setActiveSessionId: (id) => set({ activeSessionId: id }),
     addSession: (session) =>
         set((state) => ({ sessions: [session, ...state.sessions] })),
+
+    setLastMessageChart: (chartData) =>
+        set((state) => {
+            const messages = [...state.messages]
+            const last = messages[messages.length - 1]
+            if (last && last.role === "assistant") {
+                messages[messages.length - 1] = { ...last, chartData }
+            }
+            return { messages }
+        }),
 
     // --- Messages initial state ---
     messages: [],

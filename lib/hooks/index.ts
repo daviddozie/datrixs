@@ -100,14 +100,19 @@ export const useSessions = () => {
 // useChat — manages messages and agent queries
 
 export const useChat = (sessionId: string | null) => {
-    const { messages, setMessages, addMessage, updateLastMessage } = useStore()
+    const {
+        messages,
+        setMessages,
+        addMessage,
+        updateLastMessage,
+        setLastMessageChart,
+    } = useStore()
     const {
         pendingAttachment,
         clearPendingAttachment,
     } = useFileUpload(sessionId)
     const [isLoading, setIsLoading] = useState(false)
 
-    // Fetch messages for the active session
     const fetchMessages = useCallback(async () => {
         if (!sessionId) return
         try {
@@ -120,20 +125,17 @@ export const useChat = (sessionId: string | null) => {
         }
     }, [sessionId])
 
-    // Send a message with optional file attachment
     const handleSendMessage = useCallback(
         async (content: string) => {
             if (!sessionId) return
             if (!content.trim() && !pendingAttachment) return
 
-            // Build user message — include attachment if pending
             const userMessage: Message = {
                 id: crypto.randomUUID(),
                 sessionId,
                 role: "user",
                 content,
                 createdAt: new Date().toISOString(),
-                // Attach file info if there's a pending attachment
                 attachment: pendingAttachment
                     ? {
                         fileName: pendingAttachment.file.name,
@@ -146,12 +148,10 @@ export const useChat = (sessionId: string | null) => {
             }
             addMessage(userMessage)
 
-            // Clear pending attachment after adding to message
             if (pendingAttachment) {
                 clearPendingAttachment()
             }
 
-            // Add loading assistant message
             const loadingMessage: Message = {
                 id: crypto.randomUUID(),
                 sessionId,
@@ -163,7 +163,6 @@ export const useChat = (sessionId: string | null) => {
             addMessage(loadingMessage)
             setIsLoading(true)
 
-            // Build message content — include file context
             const messageContent = pendingAttachment
                 ? `[File uploaded: ${pendingAttachment.file.name}]\n${content}`
                 : content
@@ -173,6 +172,9 @@ export const useChat = (sessionId: string | null) => {
                 messageContent,
                 (chunk: string) => {
                     updateLastMessage((prev: string) => prev + chunk)
+                },
+                (chartData: any) => {
+                    setLastMessageChart(chartData)
                 },
                 () => {
                     setIsLoading(false)
@@ -189,7 +191,6 @@ export const useChat = (sessionId: string | null) => {
         [sessionId, pendingAttachment]
     )
 
-    // Fetch messages when session changes
     useEffect(() => {
         if (sessionId) fetchMessages()
     }, [sessionId])

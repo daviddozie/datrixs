@@ -1,14 +1,13 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional
-import uvicorn
 
 from routes.ingest import router as ingest_router
 from routes.stats import router as stats_router
 from routes.analyze import router as analyze_router
 from routes.merge import router as merge_router
 from routes.dataset_info import router as dataset_info_router
+from routes.search import router as search_router
+from routes.visualize import router as visualize_router
 
 app = FastAPI(
     title="Datrixs Data Processing API",
@@ -31,12 +30,14 @@ app.include_router(stats_router)
 app.include_router(analyze_router)
 app.include_router(merge_router)
 app.include_router(dataset_info_router)
+app.include_router(search_router)
+app.include_router(visualize_router)
 
 # Health check endpoint
-# Used to verify the service is running
 @app.get("/health")
 async def health_check():
     return {"status": "ok", "service": "Datrixs Python Service"}
 
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

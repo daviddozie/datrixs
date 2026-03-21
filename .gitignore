@@ -64,3 +64,6 @@ Thumbs.db
 
 # Evaluation results — generated file
 evaluation/results.json
+
+# LanceDB vector store
+python-service/lancedb/

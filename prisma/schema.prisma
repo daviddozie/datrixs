@@ -43,10 +43,10 @@ model UploadedFile {
 model Message {
   id        String   @id @default(cuid())
   sessionId String
-  role      String   // user | assistant
+  role      String
   content   String
+  chartData String?  // stored as JSON string
   createdAt DateTime @default(now())
 
-  // Relationship back to session
   session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
