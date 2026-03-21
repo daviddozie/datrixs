@@ -121,7 +121,7 @@ Open http://localhost:3000 in your browser.
 
 ---
 
-## CLI (Bonus)
+## CLI
 
 The CLI lets you interact with Datrixs entirely from the terminal.
 
