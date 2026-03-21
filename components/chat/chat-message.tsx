@@ -11,6 +11,7 @@ import {
     FileIcon,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { ChartMessage } from "@/components/chat/chart-message"
 
 type ChatMessageProps = {
     message: Message
@@ -67,6 +68,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
                         attachment={message.attachment}
                         isUser={isUser}
                     />
+                )}
+
+                {message.chartData && (
+                    <ChartMessage chartData={message.chartData} />
                 )}
 
                 {/* Text bubble — only show if has content */}
@@ -205,7 +210,17 @@ function StreamingCursor() {
 }
 
 function MessageContent({ content }: { content: string }) {
-    const lines = content.split("\n")
+    // Strip file upload prefix — shown as attachment bubble instead
+    const cleanContent = content
+        .replace(/^\[File uploaded:.*?\]\n?/gm, "")
+        .replace(/\[CHART_DATA\][\s\S]*?\[\/CHART_DATA\]/g, "")
+        .replace(/\[CHART_DATA\]/g, "")
+        .replace(/\[\/CHART_DATA\]/g, "")
+        .trim()
+
+    if (!cleanContent) return null
+
+    const lines = cleanContent.split("\n")
 
     return (
         <div className="space-y-1.5">
@@ -221,7 +236,6 @@ function MessageContent({ content }: { content: string }) {
                     )
                 }
 
-                // Numbered list
                 if (/^\d+\.\s/.test(line)) {
                     return (
                         <div key={i} className="flex gap-2">

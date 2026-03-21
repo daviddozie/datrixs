@@ -81,6 +81,9 @@ before any other tool. It will tell you exactly what to do next.`,
         // Comparison intent — user wants to compare things
         const isComparison =
             /compare|vs\.?|versus|difference between|which is (better|higher|lower|more|less)|contrast|how does .+ compare/i.test(q)
+        // Visualization intent
+        const isVisualization =
+            /chart|graph|plot|visuali|show me a|bar chart|line chart|pie chart|diagram|visual/i.test(q)
 
         // Match query to actual columns
         // Find which real columns the user is asking about
@@ -106,12 +109,35 @@ before any other tool. It will tell you exactly what to do next.`,
             }
         }
 
-        if (isOverview && !isStats && !isRanking && !isGroupBy) {
+        if (isOverview && !isStats && !isGroupBy) {
+            // Use RAG to get the most representative rows
+            const { results, method } = await ragSearch(sessionId, query, 10)
+
             return {
                 tool: "get-dataset-info",
-                reason: "User wants to understand the dataset structure",
+                reason: "User wants to understand the dataset — using RAG for context",
                 params: { sessionId },
-                nextStep: "Call get-dataset-info with the sessionId, then describe the dataset clearly including all columns and their types",
+                ragContext: results.length > 0 ? results : null,
+                ragMethod: method,
+                nextStep: results.length > 0
+                    ? `Call get-dataset-info for structure info. Additionally, here are ${results.length} relevant rows from semantic search to help with context: ${JSON.stringify(results.slice(0, 5))}. Use both to give a comprehensive answer.`
+                    : "Call get-dataset-info with the sessionId, then describe the dataset clearly",
+                datasetInfo: { columns: datasetColumns, numericColumns, categoricalColumns }
+            }
+        }
+
+        if (isVisualization) {
+            // Detect chart type from query
+            let chartType = "auto"
+            if (/line|trend|over time|time series/i.test(q)) chartType = "line"
+            else if (/pie|distribution|proportion|percentage/i.test(q)) chartType = "pie"
+            else if (/bar|compare|ranking|by region|by product/i.test(q)) chartType = "bar"
+
+            return {
+                tool: "visualize-data",
+                reason: "User wants a visual chart of the data",
+                params: { sessionId, query, chartType },
+                nextStep: `Call visualize-data with sessionId, query "${query}", and chartType "${chartType}". Then tell the user the chart has been generated and describe the key insights from the data shown.`,
                 datasetInfo: { columns: datasetColumns, numericColumns, categoricalColumns }
             }
         }
@@ -142,16 +168,47 @@ before any other tool. It will tell you exactly what to do next.`,
             }
         }
 
-        // ── Default: analyze-data handles general questions ─
+        // ── Default: analyze-data + RAG context ─
+        const { results, method } = await ragSearch(sessionId, query, 10)
+
         return {
             tool: "analyze-data",
-            reason: "General data question — running analysis",
+            reason: "General data question — running analysis with RAG context",
             params: {
                 sessionId,
                 query: query
             },
-            nextStep: `Call analyze-data with sessionId and the user's query. Available columns: ${datasetColumns.join(", ")}. Explain results in plain English.`,
+            ragContext: results.length > 0 ? results : null,
+            ragMethod: method,
+            nextStep: results.length > 0
+                ? `Call analyze-data with sessionId and the user's query. Available columns: ${datasetColumns.join(", ")}. Here are ${results.length} semantically relevant rows for additional context: ${JSON.stringify(results.slice(0, 5))}. Explain results in plain English.`
+                : `Call analyze-data with sessionId and the user's query. Available columns: ${datasetColumns.join(", ")}. Explain results in plain English.`,
             datasetInfo: { columns: datasetColumns, numericColumns, categoricalColumns }
+        }
+
+        async function ragSearch(
+            sessionId: string,
+            query: string,
+            topK: number = 10
+        ): Promise<{ results: any[]; method: string }> {
+            try {
+                const fastapiUrl = process.env.FASTAPI_URL || "http://localhost:8000"
+                const response = await fetch(`${fastapiUrl}/search`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ sessionId, query, topK }),
+                })
+                if (response.ok) {
+                    const data = await response.json()
+                    return {
+                        results: data.results || [],
+                        method: data.method || "semantic_search",
+                    }
+                }
+                return { results: [], method: "none" }
+            } catch {
+                return { results: [], method: "none" }
+            }
         }
     },
 })

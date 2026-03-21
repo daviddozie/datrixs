@@ -40,6 +40,20 @@ export type Message = {
         status: UploadedFile["status"]
         progress?: number
     }
+    // Chart visualization data
+    chartData?: {
+        chartType: "bar" | "line" | "pie"
+        data: {
+            labels: string[]
+            values: number[]
+            percentages?: number[]
+            xLabel: string
+            yLabel: string
+            title: string
+            isCurrency?: boolean
+        }
+        query: string
+    }
 }
 
 // --- Dataset ---

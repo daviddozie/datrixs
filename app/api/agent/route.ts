@@ -2,6 +2,20 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/utils/db"
 import { datrixsAgent } from "@/mastra/agent/agent"
 
+type ChartData = {
+    chartType: "bar" | "line" | "pie"
+    data: {
+        labels: string[]
+        values: number[]
+        percentages?: number[]
+        xLabel: string
+        yLabel: string
+        title: string
+        isCurrency?: boolean
+    }
+    query: string
+} | null
+
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
@@ -55,6 +69,7 @@ export async function POST(req: NextRequest) {
         })
 
         let fullResponse = ""
+        let chartData: ChartData = null
 
         const stream = new ReadableStream({
             async start(controller) {
@@ -64,14 +79,36 @@ export async function POST(req: NextRequest) {
                         controller.enqueue(new TextEncoder().encode(chunk))
                     }
 
-                    // Save complete response to DB
+                    // Check for chart data markers
+                    const chartMatch = fullResponse.match(
+                        /\[CHART_DATA\]([\s\S]*?)\[\/CHART_DATA\]/
+                    )
+                    if (chartMatch) {
+                        try {
+                            chartData = JSON.parse(chartMatch[1])
+                            fullResponse = fullResponse
+                                .replace(/\[CHART_DATA\][\s\S]*?\[\/CHART_DATA\]/, "")
+                                .trim()
+                        } catch {
+                            // Invalid JSON — ignore
+                        }
+                    }
+
+                    // Save complete response to DB including chart data
                     await db.message.create({
                         data: {
                             sessionId,
                             role: "assistant",
                             content: fullResponse,
+                            chartData: chartData ? JSON.stringify(chartData) : null,
                         },
                     })
+
+                    // Send chart as final chunk if present
+                    if (chartData) {
+                        const chartChunk = `\n[CHART]:${JSON.stringify(chartData)}`
+                        controller.enqueue(new TextEncoder().encode(chartChunk))
+                    }
 
                     controller.close()
                 } catch (error) {

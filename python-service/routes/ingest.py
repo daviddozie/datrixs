@@ -8,6 +8,7 @@ import json
 import os
 
 from store import set_dataset, get_dataset
+from embeddings import index_dataset
 
 router = APIRouter()
 
@@ -65,6 +66,13 @@ async def ingest_file(request: IngestRequest):
             set_dataset(request.sessionId, combined)
         else:
             set_dataset(request.sessionId, df)
+        try:
+            final_df = get_dataset(request.sessionId)
+            if final_df is not None:
+                index_dataset(request.sessionId, final_df)
+        except Exception as e:
+            # Don't fail upload if indexing fails
+            print(f"Warning: RAG indexing failed: {e}")
 
         # Return metadata about the dataset
         preview = df.head(5).fillna("").to_dict(orient="records")

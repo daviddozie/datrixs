@@ -2,13 +2,22 @@ import requests
 import json
 import time
 import sys
+import os
 
 # ── Configuration ─────────────────────────────
 NEXT_URL = "http://localhost:3000"
 FASTAPI_URL = "http://localhost:8000"
 
+# ── Evaluation datasets (multi-source: CSV + PDF) ──
+EVAL_DIR = os.path.dirname(os.path.abspath(__file__))
+DATASETS = [
+    {"path": os.path.join(EVAL_DIR, "sales_data.csv"), "mime": "text/csv"},
+    {"path": os.path.join(EVAL_DIR, "student_data.pdf"), "mime": "application/pdf"},
+]
+
 # ── Expected answers ──────────────────────────
 EVALUATION_QUESTIONS = [
+    # ── Sales dataset questions (from sales_data.csv) ──
     {
         "id": 1,
         "question": "What is the total revenue across all orders?",
@@ -49,6 +58,23 @@ EVALUATION_QUESTIONS = [
         "type": "text",
         "keywords": ["alice johnson", "alice", "109,300", "109300"],
     },
+    # ── Student dataset questions (from student_data.pdf) ──
+    {
+        "id": 6,
+        "question": "Which course has the highest average score among students?",
+        "expected": "Machine Learning",
+        "expected_str": "Machine Learning — 88.75",
+        "type": "text",
+        "keywords": ["machine learning", "88.75", "88.7", "88"],
+    },
+    {
+        "id": 7,
+        "question": "How many students failed their course?",
+        "expected": 2,
+        "expected_str": "2 students",
+        "type": "number",
+        "keywords": ["2 student", "two student", "2 fail", "failed: 2", "failures: 2"],
+    },
 ]
 
 
@@ -57,7 +83,7 @@ def check_services():
     print("🔍 Checking services...")
 
     try:
-        r = requests.get(f"{NEXT_URL}/api/sessions", timeout=5)
+        requests.get(f"{NEXT_URL}/api/sessions", timeout=5)
         print(f"  ✅ Next.js running at {NEXT_URL}")
     except Exception:
         print(f"  ❌ Next.js not running at {NEXT_URL}")
@@ -65,7 +91,7 @@ def check_services():
         return False
 
     try:
-        r = requests.get(f"{FASTAPI_URL}/health", timeout=5)
+        requests.get(f"{FASTAPI_URL}/health", timeout=5)
         print(f"  ✅ FastAPI running at {FASTAPI_URL}")
     except Exception:
         print(f"  ❌ FastAPI not running at {FASTAPI_URL}")
@@ -88,12 +114,17 @@ def create_session(name: str) -> str:
     raise Exception(f"Failed to create session: {data}")
 
 
-def upload_file(session_id: str, file_path: str) -> bool:
-    """Upload evaluation dataset to session"""
+def upload_file(session_id: str, file_path: str, mime_type: str = "text/csv") -> bool:
+    """Upload a dataset file to a session"""
+    if not os.path.exists(file_path):
+        print(f"  ⚠️  File not found: {file_path} — skipping")
+        return False
+
+    file_name = os.path.basename(file_path)
     with open(file_path, "rb") as f:
         r = requests.post(
             f"{NEXT_URL}/api/upload",
-            files={"file": (file_path.split("/")[-1], f, "text/csv")},
+            files={"file": (file_name, f, mime_type)},
             data={"sessionId": session_id},
             timeout=30
         )
@@ -157,17 +188,24 @@ def run_evaluation():
     session_id = create_session("Evaluation Session")
     print(f"  ✅ Session created: {session_id}")
 
-    # Upload dataset
-    csv_path = "evaluation/sales_data.csv"
-    success = upload_file(session_id, csv_path)
-    if not success:
-        print(f"  ❌ Failed to upload {csv_path}")
+    # Upload all evaluation datasets (multi-source: CSV + PDF)
+    uploaded_count = 0
+    for dataset in DATASETS:
+        file_name = os.path.basename(dataset["path"])
+        success = upload_file(session_id, dataset["path"], dataset["mime"])
+        if success:
+            print(f"  ✅ Uploaded: {file_name}")
+            uploaded_count += 1
+        else:
+            print(f"  ❌ Failed to upload: {file_name}")
+
+    if uploaded_count == 0:
+        print("  ❌ No datasets uploaded — aborting")
         sys.exit(1)
-    print(f"  ✅ Dataset uploaded: {csv_path}")
 
     # Wait for processing
     print(f"  ⏳ Waiting for data processing...")
-    time.sleep(5)
+    time.sleep(8)
 
     print(f"\n🧪 Running {len(EVALUATION_QUESTIONS)} evaluation questions...\n")
 
@@ -226,7 +264,8 @@ def run_evaluation():
     print("="*60)
 
     # Save results to JSON
-    with open("evaluation/results.json", "w") as f:
+    results_path = os.path.join(EVAL_DIR, "results.json")
+    with open(results_path, "w") as f:
         json.dump({
             "score": score,
             "passed": passed,

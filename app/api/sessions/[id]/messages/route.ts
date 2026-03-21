@@ -33,6 +33,7 @@ export async function GET(
             role: m.role as "user" | "assistant",
             content: m.content,
             createdAt: m.createdAt.toISOString(),
+            chartData: m.chartData ? JSON.parse(m.chartData) : undefined,
         }))
 
         return NextResponse.json({ success: true, data: mapped })

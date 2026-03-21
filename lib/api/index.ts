@@ -50,6 +50,7 @@ export const sendMessage = async (
     sessionId: string,
     content: string,
     onChunk: (chunk: string) => void,
+    onChart: (chartData: any) => void,
     onComplete: () => void,
     onError: (error: string) => void
 ): Promise<void> => {
@@ -58,6 +59,7 @@ export const sendMessage = async (
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ sessionId, content }),
+            signal: AbortSignal.timeout(120000),
         })
 
         if (!response.ok) {
@@ -65,7 +67,6 @@ export const sendMessage = async (
             return
         }
 
-        // Read the stream
         const reader = response.body?.getReader()
         if (!reader) {
             onError("No response stream")
@@ -73,15 +74,39 @@ export const sendMessage = async (
         }
 
         const decoder = new TextDecoder()
+        let buffer = ""
 
         while (true) {
             const { done, value } = await reader.read()
             if (done) break
-            // Decode chunk and pass to callback
-            const chunk = decoder.decode(value, { stream: true })
-            onChunk(chunk)
-        }
 
+            const chunk = decoder.decode(value, { stream: true })
+            buffer += chunk
+
+            if (buffer.includes("[CHART]:")) {
+                const parts = buffer.split("[CHART]:")
+                if (parts[0].trim()) onChunk(parts[0])
+                try {
+                    const chartData = JSON.parse(parts[1])
+                    onChart(chartData)
+                } catch {
+
+                }
+                buffer = ""
+                continue
+            }
+
+            const cleaned = buffer
+                .replace(/\[CHART_DATA\][\s\S]*?\[\/CHART_DATA\]/g, "")
+                .replace(/\[CHART_DATA\][\s\S]*/g, "")
+                .replace(/\[\/CHART_DATA\]/g, "")
+                .trim()
+
+            if (cleaned) {
+                onChunk(cleaned)
+            }
+            buffer = ""
+        }
         onComplete()
     } catch (error) {
         onError("Connection error. Please try again.")
