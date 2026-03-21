@@ -64,7 +64,7 @@ cp .env.example .env.local
 Open `.env.local` and fill in your values:
 ```bash
 OPENROUTER_API_KEY=your_openrouter_api_key_here
-MODEL_NAME=meta-llama/llama-3.1-8b-instruct:free
+MODEL_NAME=nvidia/nemotron-3-nano-30b-a3b:free
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 FASTAPI_URL=http://localhost:8000
 DATABASE_URL="file:./prisma/dev.db"
@@ -233,7 +233,7 @@ FastAPI interactive docs: http://localhost:8000/docs
 | Variable | Required | Description |
 |---|---|---|
 | `OPENROUTER_API_KEY` | Yes | Your OpenRouter API key |
-| `MODEL_NAME` | Yes | LLM model (e.g. `meta-llama/llama-3.1-8b-instruct:free`) |
+| `MODEL_NAME` | Yes | LLM model (e.g. `nvidia/nemotron-3-nano-30b-a3b:free`) |
 | `NEXT_PUBLIC_APP_URL` | Yes | Frontend URL (default: `http://localhost:3000`) |
 | `FASTAPI_URL` | Yes | Python service URL (default: `http://localhost:8000`) |
 | `DATABASE_URL` | Yes | SQLite path (default: `file:./prisma/dev.db`) |
