@@ -154,3 +154,12 @@ export const getDataset = async (
     const { data } = await api.get(`/api/sessions/${sessionId}/dataset`)
     return data
 }
+
+// Pin or unpin a session
+export const pinSession = async (
+    id: string,
+    isPinned: boolean
+): Promise<ApiResponse<Session>> => {
+    const { data } = await api.patch(`/api/sessions/${id}`, { isPinned })
+    return data
+}
