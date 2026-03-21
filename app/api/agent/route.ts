@@ -16,6 +16,22 @@ type ChartData = {
     query: string
 } | null
 
+async function autoRenameSession(sessionId: string, content: string) {
+    try {
+        const session = await db.session.findUnique({ where: { id: sessionId } })
+        if (!session || session.name !== "New chat") return
+
+        // Strip [File uploaded: ...] prefix if present
+        const cleaned = content.replace(/^\[File uploaded:[^\]]*\]\s*/i, "").trim()
+        if (!cleaned) return
+
+        const name = cleaned.length > 50 ? cleaned.slice(0, 50) + "..." : cleaned
+        await db.session.update({ where: { id: sessionId }, data: { name } })
+    } catch {
+        
+    }
+}
+
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
@@ -49,6 +65,9 @@ export async function POST(req: NextRequest) {
         await db.message.create({
             data: { sessionId, role: "user", content },
         })
+
+        // Rename session from "New chat" to first meaningful message
+        await autoRenameSession(sessionId, content)
 
         // Format history
         const historyText = history

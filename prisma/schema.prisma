@@ -11,10 +11,10 @@ datasource db {
 model Session {
   id        String   @id @default(cuid())
   name      String
+  isPinned  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // A session can have many files and messages
   files    UploadedFile[]
   messages Message[]
 }

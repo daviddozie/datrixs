@@ -39,6 +39,7 @@ export async function GET(
             updatedAt: session.updatedAt.toISOString(),
             fileCount: session._count.files,
             messageCount: session._count.messages,
+            isPinned: session.isPinned,
         }
 
         return NextResponse.json({ success: true, data: mapped })
@@ -72,9 +73,64 @@ export async function DELETE(
 
         return NextResponse.json({ success: true, data: null })
     } catch (error) {
-        console.error("[DELETE /api/sessions/[id]]", error)
+        console.error("[DELETE /api/sessions/[id]]]", error)
         return NextResponse.json(
             { success: false, error: "Failed to delete session" },
+            { status: 500 }
+        )
+    }
+}
+
+// Toggle pin status of a session
+export async function PATCH(
+    req: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+): Promise<NextResponse<ApiResponse<Session>>> {
+    try {
+        const { id } = await params
+        const body = await req.json()
+        const { isPinned } = body
+
+        if (typeof isPinned !== "boolean") {
+            return NextResponse.json(
+                { success: false, error: "isPinned must be a boolean" },
+                { status: 400 }
+            )
+        }
+
+        const session = await db.session.findUnique({ where: { id } })
+        if (!session) {
+            return NextResponse.json(
+                { success: false, error: "Session not found" },
+                { status: 404 }
+            )
+        }
+
+        const updated = await db.session.update({
+            where: { id },
+            data: { isPinned },
+            include: {
+                _count: {
+                    select: { files: true, messages: true },
+                },
+            },
+        })
+
+        const mapped: Session = {
+            id: updated.id,
+            name: updated.name,
+            createdAt: updated.createdAt.toISOString(),
+            updatedAt: updated.updatedAt.toISOString(),
+            fileCount: updated._count.files,
+            messageCount: updated._count.messages,
+            isPinned: updated.isPinned,
+        }
+
+        return NextResponse.json({ success: true, data: mapped })
+    } catch (error) {
+        console.error("[PATCH /api/sessions/[id]]]", error)
+        return NextResponse.json(
+            { success: false, error: "Failed to update session" },
             { status: 500 }
         )
     }

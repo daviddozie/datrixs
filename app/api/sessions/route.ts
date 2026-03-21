@@ -26,6 +26,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<Session[]>>> {
       updatedAt: s.updatedAt.toISOString(),
       fileCount: s._count.files,
       messageCount: s._count.messages,
+      isPinned: s.isPinned,
     }))
 
     return NextResponse.json({ success: true, data: mapped })
@@ -73,6 +74,7 @@ export async function POST(
       updatedAt: session.updatedAt.toISOString(),
       fileCount: session._count.files,
       messageCount: session._count.messages,
+      isPinned: session.isPinned,
     }
 
     return NextResponse.json(
@@ -87,3 +89,4 @@ export async function POST(
     )
   }
 }
+

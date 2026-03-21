@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { useChat } from "@/lib/hooks"
+import { useTheme } from "next-themes"
+import { useChat, useSessions } from "@/lib/hooks"
 import { useStore } from "@/lib/stores"
 import { ChatMessage } from "@/components/chat/chat-message"
 import { ChatInput } from "@/components/chat/chat-input"
 import { EmptyState } from "@/components/chat/empty-state"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { BrainCircuitIcon, PanelLeftOpenIcon } from "lucide-react"
+import { BrainCircuitIcon, PanelLeftOpenIcon, SunIcon, MoonIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -18,6 +19,13 @@ type ChatAreaProps = {
 export function ChatArea({ sessionId }: ChatAreaProps) {
     const { messages, isLoading, handleSendMessage } = useChat(sessionId)
     const { isSidebarOpen, setIsSidebarOpen } = useStore()
+    const { fetchSessions } = useSessions()
+    const { resolvedTheme, setTheme } = useTheme()
+
+    const handleSend = async (message: string) => {
+        await handleSendMessage(message)
+        setTimeout(() => fetchSessions(), 1000)
+    }
     const bottomRef = useRef<HTMLDivElement>(null)
 
     // Auto scroll to bottom on new messages
@@ -44,11 +52,24 @@ export function ChatArea({ sessionId }: ChatAreaProps) {
                     <BrainCircuitIcon className="h-5 w-5 text-primary" />
                     <span className="font-semibold text-sm">Datrixs</span>
                 </div>
-                {sessionId && (
-                    <span className="text-xs text-muted-foreground ml-auto">
-                        AI Data Analyst
-                    </span>
-                )}
+                <div className="ml-auto flex items-center gap-2">
+                    {sessionId && (
+                        <span className="text-xs text-muted-foreground">
+                            AI Data Analyst
+                        </span>
+                    )}
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+                        aria-label="Toggle theme"
+                        suppressHydrationWarning
+                    >
+                        <SunIcon className="h-4 w-4 hidden dark:block" />
+                        <MoonIcon className="h-4 w-4 block dark:hidden" />
+                    </Button>
+                </div>
             </header>
 
             {/* Messages area */}
@@ -85,7 +106,7 @@ export function ChatArea({ sessionId }: ChatAreaProps) {
                     <div className="max-w-3xl mx-auto w-full px-4 py-4">
                         <ChatInput
                             sessionId={sessionId}
-                            onSendMessage={handleSendMessage}
+                            onSendMessage={handleSend}
                             isLoading={isLoading}
                         />
                     </div>

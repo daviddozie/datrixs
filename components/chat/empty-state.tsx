@@ -41,7 +41,7 @@ export function EmptyState({
 
     return (
         <div className="flex flex-col items-center justify-center h-full px-4 py-12">
-            <div className="flex flex-col items-center text-center max-w-md">
+            <div className="flex flex-col items-center text-center max-w-lg">
 
                 {/* Icon */}
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 mb-6">
@@ -73,7 +73,7 @@ export function EmptyState({
                 )}
 
                 {/* Feature hints */}
-                <div className="grid grid-cols-1 gap-3 w-full">
+                <div className="grid md:grid-cols-2 grid-cols-1 gap-3 w-full">
                     {features.map((feature) => (
                         <div
                             key={feature.title}

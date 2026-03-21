@@ -7,6 +7,7 @@ export type Session = {
     updatedAt: string
     fileCount: number
     messageCount: number
+    isPinned?: boolean
 }
 
 // --- Uploaded File ---
