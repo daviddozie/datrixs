@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
 
         // Format history
         const historyText = history
-            .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
+            .map((m: { role: string; content: string }) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
             .join("\n")
 
         const systemContext = `SYSTEM CONTEXT (not visible to user):
