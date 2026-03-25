@@ -23,7 +23,7 @@ export async function GET(
             orderBy: { uploadedAt: "desc" },
         })
 
-        const mapped: UploadedFile[] = files.map((f) => ({
+        const mapped: UploadedFile[] = files.map((f: typeof files[number]) => ({
             id: f.id,
             sessionId: f.sessionId,
             fileName: f.fileName,

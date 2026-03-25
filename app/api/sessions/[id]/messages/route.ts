@@ -25,7 +25,7 @@ export async function GET(
             orderBy: { createdAt: "asc" },
         })
 
-        const mapped: Message[] = messages.map((m) => ({
+        const mapped: Message[] = messages.map((m: typeof messages[number]) => ({
             id: m.id,
             sessionId: m.sessionId,
             role: m.role as "user" | "assistant",
