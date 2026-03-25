@@ -1,6 +1,4 @@
 
-// Handles GET (list all messages)
-// for a specific session
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/utils/db"
 import { ApiResponse, Message } from "@/lib/types"

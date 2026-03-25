@@ -66,7 +66,6 @@ export async function POST(req: NextRequest) {
             data: { sessionId, role: "user", content },
         })
 
-        // Rename session from "New chat" to first meaningful message
         await autoRenameSession(sessionId, content)
 
         // Format history

@@ -1,5 +1,3 @@
-// Handles GET (list all files)
-// for a specific session
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/utils/db"
 import { ApiResponse, UploadedFile } from "@/lib/types"
