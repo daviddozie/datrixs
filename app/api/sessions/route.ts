@@ -19,7 +19,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<Session[]>>> {
     })
 
     // Map database shape to our Session type
-    const mapped: Session[] = sessions.map((s) => ({
+    const mapped: Session[] = sessions.map((s: typeof sessions[number]) => ({
       id: s.id,
       name: s.name,
       createdAt: s.createdAt.toISOString(),
