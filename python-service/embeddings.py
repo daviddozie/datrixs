@@ -28,18 +28,18 @@ def get_db():
 
 # Core functions
 
-def embed_texts(text: str) -> list[float]:
+def embed_text(text: str) -> list[float]:
     """Convert a single text string to an embedding vector"""
     model = get_model()
-    embedding = model.encode(text, normalize_embeddings=True)
-    return embedding.tolist()
+    embeddings = list(model.embed([text]))
+    return embeddings[0].tolist()
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
     """Convert multiple texts to embeddings efficiently"""
     model = get_model()
-    embeddings = model.encode(texts, normalize_embeddings=True, batch_size=32)
-    return embeddings.tolist()
+    embeddings = list(model.embed(texts))
+    return [e.tolist() for e in embeddings]
 
 
 def dataframe_to_texts(df: pd.DataFrame) -> list[str]:
