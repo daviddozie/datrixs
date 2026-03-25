@@ -1,5 +1,6 @@
 "use client"
 
+import { useRef, useState } from "react"
 import { Message } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import {
@@ -9,6 +10,8 @@ import {
     FileSpreadsheetIcon,
     ImageIcon,
     FileIcon,
+    CopyIcon,
+    CheckIcon,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ChartMessage } from "@/components/chat/chart-message"
@@ -21,6 +24,25 @@ export function ChatMessage({ message }: ChatMessageProps) {
     const isUser = message.role === "user"
     const isLoading = message.isLoading
     const isEmpty = message.content === "" && !isLoading && !message.attachment
+
+    const [showCopy, setShowCopy] = useState(false)
+    const [copied, setCopied] = useState(false)
+    const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    const handleMouseEnter = () => {
+        if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+        setShowCopy(true)
+    }
+
+    const handleMouseLeave = () => {
+        hideTimerRef.current = setTimeout(() => setShowCopy(false), 10000)
+    }
+
+    const handleCopy = async () => {
+        await navigator.clipboard.writeText(message.content)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+    }
 
     if (isEmpty) return null
 
@@ -77,22 +99,46 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 {/* Text bubble — only show if has content */}
                 {(message.content || isLoading) && (
                     <div
-                        className={cn(
-                            "rounded-2xl px-4 py-3 text-sm leading-relaxed",
-                            isUser
-                                ? "bg-primary text-primary-foreground rounded-tr-sm"
-                                : "bg-muted text-foreground rounded-tl-sm"
-                        )}
+                        className="relative group"
+                        onMouseEnter={!isUser ? handleMouseEnter : undefined}
+                        onMouseLeave={!isUser ? handleMouseLeave : undefined}
                     >
-                        {isLoading && message.content === "" ? (
-                            <ThinkingDots />
-                        ) : (
-                            <>
-                                <MessageContent content={message.content} />
-                                {isLoading && message.content !== "" && (
-                                    <StreamingCursor />
+                        <div
+                            className={cn(
+                                "rounded-2xl px-4 py-3 text-sm leading-relaxed",
+                                isUser
+                                    ? "bg-primary text-primary-foreground rounded-tr-sm"
+                                    : "bg-muted text-foreground rounded-tl-sm"
+                            )}
+                        >
+                            {isLoading && message.content === "" ? (
+                                <ThinkingDots />
+                            ) : (
+                                <>
+                                    <MessageContent content={message.content} />
+                                    {isLoading && message.content !== "" && (
+                                        <StreamingCursor />
+                                    )}
+                                </>
+                            )}
+                        </div>
+
+                        {/* Copy button — assistant only */}
+                        {!isUser && !isLoading && message.content && (
+                            <button
+                                onClick={handleCopy}
+                                className={cn(
+                                    "absolute -bottom-7 left-1 flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer transition-all duration-200",
+                                    showCopy ? "opacity-100" : "opacity-0 pointer-events-none"
                                 )}
-                            </>
+                                aria-label="Copy message"
+                            >
+                                {copied ? (
+                                    <><CheckIcon className="h-3 w-3 text-green-500" /><span className="text-green-500">Copied</span></>
+                                ) : (
+                                    <><CopyIcon className="h-3 w-3" /><span>Copy</span></>
+                                )}
+                            </button>
                         )}
                     </div>
                 )}

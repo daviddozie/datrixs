@@ -47,6 +47,11 @@ export function AppSidebar({
   const [isCreating, setIsCreating] = useState(false)
 
   const handleNewSession = async () => {
+    const activeSession = sessions.find((s) => s.id === activeSessionId)
+    if (activeSession && activeSession.name === "New chat") {
+      onSelectSession(activeSession.id)
+      return
+    }
     setIsCreating(true)
     const name = `New chat`
     await onCreateSession(name)
@@ -127,7 +132,7 @@ export function AppSidebar({
               "w-full flex items-center gap-2 px-3 py-2 rounded-lg",
               "text-sm text-sidebar-foreground/80 hover:text-sidebar-foreground",
               "hover:bg-sidebar-accent transition-colors duration-150",
-              "border border-sidebar-border"
+              "border border-sidebar-border cursor-pointer"
             )}
           >
             <PlusIcon className="h-4 w-4" />
