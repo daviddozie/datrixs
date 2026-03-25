@@ -26,8 +26,10 @@ type Store = {
     // --- UI State ---
     isSidebarOpen: boolean
     isUploading: boolean
+    sessionsLoaded: boolean
     setIsSidebarOpen: (open: boolean) => void
     setIsUploading: (uploading: boolean) => void
+    setSessionsLoaded: (loaded: boolean) => void
 
 
     pendingAttachment: {
@@ -50,9 +52,11 @@ export const useStore = create<Store>((set) => ({
     // --- Sessions initial state ---
     sessions: [],
     activeSessionId: null,
+    sessionsLoaded: false,
 
     setSessions: (sessions) => set({ sessions }),
     setActiveSessionId: (id) => set({ activeSessionId: id }),
+    setSessionsLoaded: (loaded) => set({ sessionsLoaded: loaded }),
     addSession: (session) =>
         set((state) => ({ sessions: [session, ...state.sessions] })),
 

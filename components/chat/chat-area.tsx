@@ -7,10 +7,8 @@ import { useStore } from "@/lib/stores"
 import { ChatMessage } from "@/components/chat/chat-message"
 import { ChatInput } from "@/components/chat/chat-input"
 import { EmptyState } from "@/components/chat/empty-state"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { BrainCircuitIcon, PanelLeftOpenIcon, SunIcon, MoonIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 
 type ChatAreaProps = {
     sessionId: string | null
@@ -18,9 +16,15 @@ type ChatAreaProps = {
 
 export function ChatArea({ sessionId }: ChatAreaProps) {
     const { messages, isLoading, handleSendMessage } = useChat(sessionId)
-    const { isSidebarOpen, setIsSidebarOpen } = useStore()
-    const { fetchSessions } = useSessions()
+    const { isSidebarOpen, setIsSidebarOpen, sessions, sessionsLoaded } = useStore()
+    const { fetchSessions, handleCreateSession } = useSessions()
     const { resolvedTheme, setTheme } = useTheme()
+
+    useEffect(() => {
+        if (sessionsLoaded && sessions.length === 0) {
+            handleCreateSession("New chat")
+        }
+    }, [sessionsLoaded, sessions.length])
 
     const handleSend = async (message: string) => {
         await handleSendMessage(message)
@@ -74,15 +78,7 @@ export function ChatArea({ sessionId }: ChatAreaProps) {
 
             {/* Messages area */}
             <div className="flex-1 overflow-y-auto">
-                {!sessionId ? (
-                    // No session selected
-                    <EmptyState
-                        title="Welcome to Datrixs"
-                        description="Create a new session to start analyzing your data"
-                        showNewSessionButton
-                    />
-                ) : messages.length === 0 ? (
-                    // Session exists but no messages
+                {messages.length === 0 ? (
                     <EmptyState
                         title="Start a conversation"
                         description="Upload a file and ask questions about your data in plain English"
@@ -100,18 +96,16 @@ export function ChatArea({ sessionId }: ChatAreaProps) {
                 )}
             </div>
 
-            {/* Input area — only show when session is active */}
-            {sessionId && (
-                <div className="shrink-0 border-t bg-background/95 backdrop-blur">
-                    <div className="max-w-3xl mx-auto w-full px-4 py-4">
-                        <ChatInput
-                            sessionId={sessionId}
-                            onSendMessage={handleSend}
-                            isLoading={isLoading}
-                        />
-                    </div>
+            {/* Input area */}
+            <div className="shrink-0 border-t bg-background/95 backdrop-blur">
+                <div className="max-w-3xl mx-auto w-full px-4 py-4">
+                    <ChatInput
+                        sessionId={sessionId ?? ""}
+                        onSendMessage={handleSend}
+                        isLoading={isLoading || !sessionId}
+                    />
                 </div>
-            )}
+            </div>
         </div>
     )
 }

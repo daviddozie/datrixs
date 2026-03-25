@@ -22,6 +22,7 @@ export const useSessions = () => {
         setSessions,
         setActiveSessionId,
         addSession,
+        setSessionsLoaded,
     } = useStore()
     const [isLoading, setIsLoading] = useState(false)
 
@@ -41,6 +42,7 @@ export const useSessions = () => {
             toast.error("Failed to load sessions")
         } finally {
             setIsLoading(false)
+            setSessionsLoaded(true)
         }
     }, [activeSessionId])
 

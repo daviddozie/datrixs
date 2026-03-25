@@ -1,7 +1,3 @@
-"use client"
-
-import { cn } from "@/lib/utils"
-
 type ChartData = {
     chartType: "bar" | "line" | "pie"
     data: {
@@ -27,7 +23,7 @@ export function ChartMessage({ chartData }: ChartMessageProps) {
     if (!data || !data.labels || !data.values) return null
 
     return (
-        <div className="rounded-2xl border bg-card overflow-hidden w-full max-w-[500px]">
+        <div className="rounded-2xl border bg-card overflow-hidden w-full max-w-125">
             {/* Chart title */}
             <div className="px-4 py-3 border-b bg-muted/30">
                 <p className="text-sm font-medium">{data.title}</p>
@@ -62,7 +58,7 @@ function BarChart({ data }: { data: ChartData["data"] }) {
             {data.labels.map((label, i) => (
                 <div key={i} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground truncate max-w-[140px]">
+                        <span className="text-muted-foreground truncate max-w-35">
                             {label}
                         </span>
                         <span className="font-medium tabular-nums ml-2">
