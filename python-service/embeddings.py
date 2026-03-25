@@ -2,23 +2,23 @@ import lancedb
 import pandas as pd
 import numpy as np
 import os
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 
-# ── Model setup ───────────────────────────────
-MODEL_NAME = "all-MiniLM-L6-v2"
+# Model setup
+MODEL_NAME = "BAAI/bge-small-en-v1.5"
 _model = None
 
-def get_model() -> SentenceTransformer:
+def get_model() -> TextEmbedding:
     """Lazy load the embedding model"""
     global _model
     if _model is None:
         print(f"Loading embedding model: {MODEL_NAME}")
-        _model = SentenceTransformer(MODEL_NAME)
+        _model = TextEmbedding(MODEL_NAME)
         print("Embedding model loaded!")
     return _model
 
 
-# ── LanceDB setup ─────────────────────────────
+# LanceDB setup
 DB_PATH = os.path.join(os.path.dirname(__file__), "lancedb")
 
 def get_db():
@@ -26,9 +26,9 @@ def get_db():
     return lancedb.connect(DB_PATH)
 
 
-# ── Core functions ────────────────────────────
+# Core functions
 
-def embed_text(text: str) -> list[float]:
+def embed_texts(text: str) -> list[float]:
     """Convert a single text string to an embedding vector"""
     model = get_model()
     embedding = model.encode(text, normalize_embeddings=True)
