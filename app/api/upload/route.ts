@@ -175,7 +175,12 @@ async function processFileAsync(
             let errorMessage = "Failed to process file"
             try {
                 const errBody = await response.json()
-                if (errBody?.detail) errorMessage = errBody.detail
+                if (errBody?.detail) {
+                    // FastAPI validation errors return detail as an array of objects
+                    errorMessage = Array.isArray(errBody.detail)
+                        ? errBody.detail.map((e: { msg?: string }) => e.msg).join(", ")
+                        : String(errBody.detail)
+                }
             } catch {}
             console.error("[processFileAsync] Python error:", errorMessage)
             await db.uploadedFile.update({
