@@ -5,7 +5,6 @@ import path from "path"
 import { db } from "@/lib/utils/db"
 import { ApiResponse, UploadedFile } from "@/lib/types"
 
-// Allowed file types for security
 const ALLOWED_TYPES = [
     "text/csv",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -17,7 +16,6 @@ const ALLOWED_TYPES = [
     "image/webp",
 ]
 
-// Max file size: 10MB
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 
 export async function POST(
@@ -100,7 +98,7 @@ export async function POST(
             },
         })
 
-        processFileAsync(uploadedFile.id, sessionId, filePath, fileType)
+        processFileAsync(uploadedFile.id, sessionId, filePath, fileType, file.name, buffer)
 
         const mapped: UploadedFile = {
             id: uploadedFile.id,
@@ -110,6 +108,7 @@ export async function POST(
             fileSize: uploadedFile.fileSize,
             uploadedAt: uploadedFile.uploadedAt.toISOString(),
             status: "processing",
+            errorMessage: undefined,
         }
 
         return NextResponse.json(
@@ -129,19 +128,39 @@ async function processFileAsync(
     fileId: string,
     sessionId: string,
     filePath: string,
-    fileType: string
+    fileType: string,
+    fileName: string,
+    fileBytes: Buffer
 ) {
     try {
         const fastapiUrl = process.env.FASTAPI_URL || "http://localhost:8000"
 
+        // Send the file bytes directly — works in both local and cloud deployments
+        const form = new FormData()
+        form.append("fileId", fileId)
+        form.append("sessionId", sessionId)
+        form.append("fileType", fileType)
+        form.append("file", new Blob([new Uint8Array(fileBytes)]), fileName)
+
         const response = await fetch(`${fastapiUrl}/ingest`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fileId, sessionId, filePath, fileType }),
+            body: form,
         })
 
         if (response.ok) {
             const result = await response.json()
+
+            // Treat an empty result (no rows extracted) as an error
+            if (!result.rowCount || result.rowCount === 0) {
+                const msg = fileType === "pdf"
+                    ? "No data could be extracted from this PDF. It may be image-only, scanned, or contain no readable tables or text."
+                    : "No data could be extracted from this file."
+                await db.uploadedFile.update({
+                    where: { id: fileId },
+                    data: { status: "error", errorMessage: msg },
+                })
+                return
+            }
 
             await db.uploadedFile.update({
                 where: { id: fileId },
@@ -153,16 +172,22 @@ async function processFileAsync(
                 },
             })
         } else {
+            let errorMessage = "Failed to process file"
+            try {
+                const errBody = await response.json()
+                if (errBody?.detail) errorMessage = errBody.detail
+            } catch {}
+            console.error("[processFileAsync] Python error:", errorMessage)
             await db.uploadedFile.update({
                 where: { id: fileId },
-                data: { status: "error" },
+                data: { status: "error", errorMessage },
             })
         }
     } catch (error) {
         console.error("[processFileAsync]", error)
         await db.uploadedFile.update({
             where: { id: fileId },
-            data: { status: "error" },
+            data: { status: "error", errorMessage: "Could not connect to the processing service" },
         })
     }
 }

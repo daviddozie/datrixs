@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 import pandas as pd
 import pdfplumber
@@ -6,17 +6,13 @@ import pytesseract
 from PIL import Image
 import json
 import os
+import tempfile
+import shutil
 
 from store import set_dataset, get_dataset
 from embeddings import index_dataset
 
 router = APIRouter()
-
-class IngestRequest(BaseModel):
-    fileId: str
-    sessionId: str
-    filePath: str
-    fileType: str
 
 class IngestResponse(BaseModel):
     success: bool
@@ -27,22 +23,27 @@ class IngestResponse(BaseModel):
     preview: list[dict]
 
 @router.post("/ingest", response_model=IngestResponse)
-async def ingest_file(request: IngestRequest):
+async def ingest_file(
+    fileId: str = Form(...),
+    sessionId: str = Form(...),
+    fileType: str = Form(...),
+    file: UploadFile = File(...),
+):
     """
-    Receives a file path from Next.js after upload,
-    reads it into a pandas DataFrame, stores it,
-    and returns metadata about the dataset.
+    Receives a file upload from Next.js, reads it into a pandas DataFrame,
+    stores it, and returns metadata about the dataset.
+    Works in both local and cloud deployments.
     """
+    tmp_path = None
     try:
-        # Check file exists
-        if not os.path.exists(request.filePath):
-            raise HTTPException(
-                status_code=404,
-                detail=f"File not found: {request.filePath}"
-            )
+        # Save the uploaded bytes to a temp file so existing loaders work unchanged
+        suffix = "." + (file.filename.rsplit(".", 1)[-1] if "." in (file.filename or "") else fileType)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            shutil.copyfileobj(file.file, tmp)
+            tmp_path = tmp.name
 
         # Load file based on type
-        df = load_file(request.filePath, request.fileType)
+        df = load_file(tmp_path, fileType)
 
         if df is None or df.empty:
             raise HTTPException(
@@ -54,22 +55,22 @@ async def ingest_file(request: IngestRequest):
         df = clean_dataframe(df)
 
         # Store under fileId for individual file access
-        set_dataset(request.fileId, df)
+        set_dataset(fileId, df)
 
         # Store under sessionId for agent queries
         # If session already has data, append to avoid losing
         # previously uploaded files in the same session
-        existing = get_dataset(request.sessionId)
+        existing = get_dataset(sessionId)
         if existing is not None:
             combined = pd.concat([existing, df], ignore_index=True)
             combined = combined.drop_duplicates()
-            set_dataset(request.sessionId, combined)
+            set_dataset(sessionId, combined)
         else:
-            set_dataset(request.sessionId, df)
+            set_dataset(sessionId, df)
         try:
-            final_df = get_dataset(request.sessionId)
+            final_df = get_dataset(sessionId)
             if final_df is not None:
-                index_dataset(request.sessionId, final_df)
+                index_dataset(sessionId, final_df)
         except Exception as e:
             # Don't fail upload if indexing fails
             print(f"Warning: RAG indexing failed: {e}")
@@ -79,7 +80,7 @@ async def ingest_file(request: IngestRequest):
 
         return IngestResponse(
             success=True,
-            fileId=request.fileId,
+            fileId=fileId,
             rowCount=len(df),
             columnCount=len(df.columns),
             columns=df.columns.tolist(),
@@ -93,6 +94,9 @@ async def ingest_file(request: IngestRequest):
             status_code=500,
             detail=f"Failed to ingest file: {str(e)}"
         )
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
 def load_file(file_path: str, file_type: str) -> pd.DataFrame:
     """
