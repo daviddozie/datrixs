@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from "next/server"
-import { writeFile, mkdir } from "fs/promises"
-import { existsSync } from "fs"
-import path from "path"
 import { db } from "@/lib/utils/db"
 import { ApiResponse, UploadedFile } from "@/lib/types"
 
@@ -68,37 +65,27 @@ export async function POST(
             )
         }
 
-        const uploadDir = path.join(process.cwd(), "uploads", sessionId)
-        if (!existsSync(uploadDir)) {
-            await mkdir(uploadDir, { recursive: true })
-        }
-
-        const timestamp = Date.now()
-        const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "-")
-        const uniqueFileName = `${timestamp}-${safeFileName}`
-        const filePath = path.join(uploadDir, uniqueFileName)
-
-        // Convert file to buffer and save to disk
+        // Read file bytes into memory — no disk write needed
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
-        await writeFile(filePath, buffer)
 
         // Determine file type from mime type
         const fileType = getFileType(file.type)
 
         // Save file record to database with "processing" status
+        // filePath is empty string — we no longer store files on disk
         const uploadedFile = await db.uploadedFile.create({
             data: {
                 sessionId,
                 fileName: file.name,
                 fileType,
                 fileSize: file.size,
-                filePath,
+                filePath: "",
                 status: "processing",
             },
         })
 
-        processFileAsync(uploadedFile.id, sessionId, filePath, fileType, file.name, buffer)
+        processFileAsync(uploadedFile.id, sessionId, fileType, file.name, buffer)
 
         const mapped: UploadedFile = {
             id: uploadedFile.id,
@@ -127,7 +114,6 @@ export async function POST(
 async function processFileAsync(
     fileId: string,
     sessionId: string,
-    filePath: string,
     fileType: string,
     fileName: string,
     fileBytes: Buffer
