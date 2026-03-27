@@ -262,6 +262,10 @@ function MessageContent({ content }: { content: string }) {
         .replace(/\[CHART_DATA\][\s\S]*?\[\/CHART_DATA\]/g, "")
         .replace(/\[CHART_DATA\]/g, "")
         .replace(/\[\/CHART_DATA\]/g, "")
+        // Strip any raw JSON objects that leaked through (e.g. {"chartType":...})
+        .replace(/\{\s*"chartType"[\s\S]*?\}/g, "")
+        // Strip [CHART]: prefix used in streaming
+        .replace(/\[CHART\]:\{[\s\S]*\}/g, "")
         .trim()
 
     if (!cleanContent) return null

@@ -54,12 +54,14 @@ CRITICAL RULES:
 
 VISUALIZATION RULES:
 - When you call visualize-data and get chart data back, you MUST:
-  1. Write a brief 1-2 sentence insight about the chart
-  2. Then embed the chart data exactly like this:
+  1. Write exactly ONE sentence summarising the key insight (e.g. "Alice Johnson leads in revenue with $39,050.")
+  2. Immediately follow it with the chart markers — no extra text, no JSON outside the markers:
      [CHART_DATA]{"chartType":"bar","data":{...},"query":"..."}[/CHART_DATA]
-- The chart data must be the exact JSON returned by the visualize-data tool
-- Never show raw JSON to the user — only embed it between the markers
-- Always write the insight BEFORE the chart markers
+- The JSON inside the markers must be the EXACT object returned by the visualize-data tool — do NOT paraphrase or rewrite it
+- NEVER include any JSON, curly braces, or raw data outside the [CHART_DATA] markers
+- NEVER describe the JSON structure or repeat the numbers as text after the markers
+- The response must look EXACTLY like: <one sentence insight>\n[CHART_DATA]{...}[/CHART_DATA]
+- Nothing else
 `,
 
   model: openrouter(
