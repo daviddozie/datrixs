@@ -275,11 +275,11 @@ export const useFileUpload = (sessionId: string | null) => {
                     pollFileStatus(response.data.id)
                 } else {
                     updateAttachmentStatus("error")
-                    toast.error(`Failed to upload ${file.name}`)
+                    toast.error(response.error || `Failed to upload ${file.name}`)
                 }
             } catch (error) {
                 updateAttachmentStatus("error")
-                toast.error(`Failed to upload ${file.name}`)
+                toast.error(`Failed to upload ${file.name}. Please try again.`)
             }
         },
         [sessionId]
@@ -307,7 +307,10 @@ export const useFileUpload = (sessionId: string | null) => {
                             updateFileStatus(fileId, "ready")
                             return
                         } else if (file?.status === "error") {
-                            updateAttachmentStatus("error")
+                            const errMsg = file.errorMessage
+                                || "Failed to process file. Please try a different file."
+                            updateAttachmentStatus("error", undefined, errMsg)
+                            toast.error(errMsg)
                             return
                         }
                     }

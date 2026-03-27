@@ -20,6 +20,7 @@ export type UploadedFile = {
     fileSize: number
     uploadedAt: string
     status: "uploading" | "processing" | "ready" | "error"
+    errorMessage?: string
     rowCount?: number
     columnCount?: number
     columns?: string[]

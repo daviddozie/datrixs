@@ -38,12 +38,14 @@ type Store = {
         progress: number
         status: UploadedFile["status"]
         uploadedFileId: string | null
+        errorMessage?: string
     } | null
     setPendingAttachment: (attachment: Store["pendingAttachment"]) => void
     updateAttachmentProgress: (progress: number) => void
     updateAttachmentStatus: (
         status: UploadedFile["status"],
-        fileId?: string
+        fileId?: string,
+        errorMessage?: string
     ) => void
     clearPendingAttachment: () => void
 }
@@ -117,13 +119,14 @@ export const useStore = create<Store>((set) => ({
                 ? { ...state.pendingAttachment, progress }
                 : null,
         })),
-    updateAttachmentStatus: (status, fileId) =>
+    updateAttachmentStatus: (status, fileId, errorMessage) =>
         set((state) => ({
             pendingAttachment: state.pendingAttachment
                 ? {
                     ...state.pendingAttachment,
                     status,
                     uploadedFileId: fileId || state.pendingAttachment.uploadedFileId,
+                    errorMessage,
                 }
                 : null,
         })),

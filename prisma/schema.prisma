@@ -28,11 +28,12 @@ model UploadedFile {
   fileType   String   // csv | xlsx | pdf | image
   fileSize   Int
   filePath   String   // where the file is stored on disk
-  status     String   @default("processing") // uploading | processing | ready | error
-  rowCount   Int?
-  columnCount Int?
-  columns    String?  // stored as JSON string
-  uploadedAt DateTime @default(now())
+  status       String   @default("processing") // uploading | processing | ready | error
+  errorMessage String?  // set when status = "error"
+  rowCount     Int?
+  columnCount  Int?
+  columns      String?  // stored as JSON string
+  uploadedAt   DateTime @default(now())
 
   // Relationship back to session
   session Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)

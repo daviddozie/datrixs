@@ -31,6 +31,7 @@ export async function GET(
             fileSize: f.fileSize,
             uploadedAt: f.uploadedAt.toISOString(),
             status: f.status as UploadedFile["status"],
+            errorMessage: f.errorMessage ?? undefined,
             rowCount: f.rowCount ?? undefined,
             columnCount: f.columnCount ?? undefined,
             columns: f.columns ? JSON.parse(f.columns) : undefined,

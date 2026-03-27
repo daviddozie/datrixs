@@ -317,13 +317,16 @@ function FilePreview({
                 <p className="text-sm font-medium truncate">
                     {attachment.file.name}
                 </p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className={cn(
+                    "text-xs mt-0.5",
+                    isError ? "text-red-500" : "text-muted-foreground"
+                )}>
                     {isLoading && attachment.status === "uploading" &&
                         `Uploading... ${progress}%`}
                     {isLoading && attachment.status === "processing" &&
                         "Processing..."}
                     {isReady && "Ready to send"}
-                    {isError && "Upload failed"}
+                    {isError && (attachment.errorMessage || "Upload failed")}
                     {" · "}
                     {formatFileSize(attachment.file.size)}
                 </p>
