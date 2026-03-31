@@ -14,6 +14,7 @@ import {
     CheckIcon,
 } from "lucide-react"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Skeleton } from "@/components/ui/skeleton"
 import { ChartMessage } from "@/components/chat/chart-message"
 
 type ChatMessageProps = {
@@ -159,7 +160,7 @@ function FileAttachmentBubble({
     return (
         <div
             className={cn(
-                "flex items-center gap-3 rounded-2xl px-4 py-3 min-w-[200px]",
+                "flex items-center gap-3 rounded-2xl px-4 py-3 min-w-50",
                 isUser
                     ? "bg-primary/80 text-primary-foreground rounded-tr-sm"
                     : "bg-muted text-foreground rounded-tl-sm"
@@ -225,20 +226,13 @@ function FileAttachmentBubble({
 function ThinkingDots() {
     return (
         <div
-            className="flex items-center gap-1 py-1"
+            className="flex flex-col gap-2 py-1 w-40"
             aria-label="Datrixs is thinking"
             role="status"
         >
-            {[0, 1, 2].map((i) => (
-                <div
-                    key={i}
-                    className="h-2 w-2 rounded-full bg-current opacity-60 animate-bounce"
-                    style={{
-                        animationDelay: `${i * 0.15}s`,
-                        animationDuration: "0.8s",
-                    }}
-                />
-            ))}
+            <Skeleton className="h-3 w-full rounded-md" />
+            <Skeleton className="h-3 w-4/5 rounded-md" />
+            <Skeleton className="h-3 w-3/5 rounded-md" />
         </div>
     )
 }

@@ -114,9 +114,11 @@ export const useChat = (sessionId: string | null) => {
         clearPendingAttachment,
     } = useFileUpload(sessionId)
     const [isLoading, setIsLoading] = useState(false)
+    const [messagesLoading, setMessagesLoading] = useState(false)
 
     const fetchMessages = useCallback(async () => {
         if (!sessionId) return
+        setMessagesLoading(true)
         try {
             const response = await getMessages(sessionId)
             if (response.success && response.data) {
@@ -124,6 +126,8 @@ export const useChat = (sessionId: string | null) => {
             }
         } catch (error) {
             toast.error("Failed to load messages")
+        } finally {
+            setMessagesLoading(false)
         }
     }, [sessionId])
 
@@ -200,6 +204,7 @@ export const useChat = (sessionId: string | null) => {
     return {
         messages,
         isLoading,
+        messagesLoading,
         handleSendMessage,
         fetchMessages,
     }

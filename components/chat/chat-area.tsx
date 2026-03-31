@@ -7,6 +7,7 @@ import { useStore } from "@/lib/stores"
 import { ChatMessage } from "@/components/chat/chat-message"
 import { ChatInput } from "@/components/chat/chat-input"
 import { EmptyState } from "@/components/chat/empty-state"
+import { Skeleton } from "@/components/ui/skeleton"
 import { BrainCircuitIcon, PanelLeftOpenIcon, SunIcon, MoonIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -15,7 +16,7 @@ type ChatAreaProps = {
 }
 
 export function ChatArea({ sessionId }: ChatAreaProps) {
-    const { messages, isLoading, handleSendMessage } = useChat(sessionId)
+    const { messages, isLoading, messagesLoading, handleSendMessage } = useChat(sessionId)
     const { isSidebarOpen, setIsSidebarOpen, sessions, sessionsLoaded } = useStore()
     const { fetchSessions, handleCreateSession } = useSessions()
     const { resolvedTheme, setTheme } = useTheme()
@@ -78,7 +79,16 @@ export function ChatArea({ sessionId }: ChatAreaProps) {
 
             {/* Messages area */}
             <div className="flex-1 overflow-y-auto">
-                {messages.length === 0 ? (
+                {messagesLoading ? (
+                    /* Skeleton while fetching messages for a session */
+                    <div className="max-w-3xl mx-auto w-full px-4 py-6 space-y-6">
+                        <MessageSkeleton align="right" widths={["60%"]} />
+                        <MessageSkeleton align="left" widths={["80%", "55%"]} />
+                        <MessageSkeleton align="right" widths={["45%"]} />
+                        <MessageSkeleton align="left" widths={["70%", "40%", "60%"]} />
+                        <MessageSkeleton align="right" widths={["50%"]} />
+                    </div>
+                ) : messages.length === 0 ? (
                     <EmptyState
                         title="Start a conversation"
                         description="Upload a file and ask questions about your data in plain English"
@@ -104,6 +114,34 @@ export function ChatArea({ sessionId }: ChatAreaProps) {
                         onSendMessage={handleSend}
                         isLoading={isLoading || !sessionId}
                     />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+// ============================================
+// MessageSkeleton — mimics a chat bubble row
+// ============================================
+function MessageSkeleton({
+    align,
+    widths,
+}: {
+    align: "left" | "right"
+    widths: string[]
+}) {
+    return (
+        <div className={`flex gap-3 w-full ${align === "right" ? "flex-row-reverse" : "flex-row"}`}>
+            {/* Avatar skeleton */}
+            <Skeleton className="h-8 w-8 rounded-full shrink-0 mt-0.5" />
+            <div className={`flex flex-col gap-2 max-w-[70%] ${align === "right" ? "items-end" : "items-start"}`}>
+                {/* Label skeleton */}
+                <Skeleton className="h-3 w-10 rounded" />
+                {/* Bubble skeleton */}
+                <div className="flex flex-col gap-1.5">
+                    {widths.map((w, i) => (
+                        <Skeleton key={i} className="h-9 rounded-2xl" style={{ width: w }} />
+                    ))}
                 </div>
             </div>
         </div>
