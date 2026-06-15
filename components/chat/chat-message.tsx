@@ -225,17 +225,21 @@ function FileAttachmentBubble({
 
 function ThinkingDots() {
     return (
-        <div
-            className="flex flex-col gap-2 py-1 w-40"
-            aria-label="Datrixs is thinking"
-            role="status"
-        >
-            <Skeleton className="h-3 w-full rounded-md" />
-            <Skeleton className="h-3 w-4/5 rounded-md" />
-            <Skeleton className="h-3 w-3/5 rounded-md" />
+        <div className="flex items-center gap-1 py-1" aria-label="Datrixs is thinking" role="status">
+            {[0, 1, 2].map((i) => (
+                <span
+                    key={i}
+                    className="inline-block h-2 w-2 rounded-full bg-muted-foreground opacity-70 animate-bounce"
+                    style={{
+                        animationDelay: `${i * 0.2}s`,
+                        animationDuration: "1s",
+                    }}
+                />
+            ))}
         </div>
-    )
+    );
 }
+
 
 // ============================================
 // StreamingCursor
@@ -250,17 +254,16 @@ function StreamingCursor() {
 }
 
 function MessageContent({ content }: { content: string }) {
-    // Strip file upload prefix — shown as attachment bubble instead
     const cleanContent = content
-        .replace(/^\[File uploaded:.*?\]\n?/gm, "")
-        .replace(/\[CHART_DATA\][\s\S]*?\[\/CHART_DATA\]/g, "")
-        .replace(/\[CHART_DATA\]/g, "")
-        .replace(/\[\/CHART_DATA\]/g, "")
-        // Strip any raw JSON objects that leaked through (e.g. {"chartType":...})
-        .replace(/\{\s*"chartType"[\s\S]*?\}/g, "")
-        // Strip [CHART]: prefix used in streaming
-        .replace(/\[CHART\]:\{[\s\S]*\}/g, "")
-        .trim()
+        .replace(/\[CHART_DATA\][\s\S]*?\[\/CHART_DATA\]/g, '')
+        .replace(/\\?\"chartType\"[\s\S]+?\\?\"query\"[\s\S]+?}/g, '')
+        .replace(/\\?\"success\"[\s\S]+?\\?\"query\"[\s\S]+?}/g, '')
+        .replace(/\\?\"data\"[\s\S]+?\\?\"title\"[\s\S]+?}/g, '')
+        .replace(/\\?\"labels\"[\s\S]+?\\?\"percentages\"[\s\S]+?}/g, '')
+        .replace(/\\?\"values\"[\s\S]+?\\?\"isCurrency\"[\s\S]+?}/g, '')
+        .replace(/\\?\"xLabel\"[\s\S]+?\\?\"yLabel\"[\s\S]+?}/g, '')
+        .replace(/\\?\"[^\"]+\"[\s\S]+?\\?\"[^\"]+\"[\s\S]+?}/g, '')
+        .trim();
 
     if (!cleanContent) return null
 

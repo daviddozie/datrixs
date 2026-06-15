@@ -200,10 +200,13 @@ The `evaluation/` folder contains a **multi-source dataset** (CSV + PDF) and an 
 | 5 | Sales CSV | Who is the top sales rep by total revenue? | Alice Johnson |
 | 6 | Student PDF | Which course has the highest average score? | Machine Learning |
 | 7 | Student PDF | How many students failed their course? | 2 |
+Show me a pie chart of revenue distribution by category
+Show me a bar chart of profit by sales rep
+Show me a line chart of revenue trend over time
 
 ### Running the evaluation
 ```bash
-# Make sure both services are running first (see above)
+
 python3 evaluation/evaluate.py
 ```
 

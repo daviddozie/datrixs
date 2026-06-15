@@ -120,9 +120,6 @@ export function ChatArea({ sessionId }: ChatAreaProps) {
     )
 }
 
-// ============================================
-// MessageSkeleton — mimics a chat bubble row
-// ============================================
 function MessageSkeleton({
     align,
     widths,
